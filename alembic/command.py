@@ -97,6 +97,8 @@ def revision(config, message=None, autogenerate=False, sql=False):
 
 def upgrade(config, revision, sql=False, tag=None):
     """Upgrade to a later version."""
+    print 'calling command.upgrade'
+    print 'a..{}..a'.format(revision)
 
     script = ScriptDirectory.from_config(config)
 
@@ -107,6 +109,7 @@ def upgrade(config, revision, sql=False, tag=None):
         starting_rev, revision = revision.split(':', 2)
 
     def upgrade(rev, context):
+        print '...{}...'.format(rev)
         return script._upgrade_revs(revision, rev)
 
     with EnvironmentContext(

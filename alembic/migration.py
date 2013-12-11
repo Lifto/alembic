@@ -77,9 +77,19 @@ class MigrationContext(object):
                                             False)
 
         version_table = opts.get('version_table', 'alembic_version')
-        self._version = Table(
-            version_table, MetaData(),
-            Column('version_num', String(32), nullable=False))
+        if not self.dialect.name == "cqlengine":
+            self._version = Table(
+                version_table, MetaData(),
+                Column('version_num', String(32), nullable=False))
+        else:
+            from cqlengine import models
+            from cqlengine import columns
+            class VersionTable(models.Model):
+                __table_name__ = version_table
+                key = columns.Text(primary_key=True) # Always is 'alembic'
+                version_num = columns.Text()
+            self._version = VersionTable
+
 
         self._start_from_rev = opts.get("starting_rev")
         self.impl = ddl.DefaultImpl.get_by_dialect(dialect)(
@@ -152,7 +162,36 @@ class MigrationContext(object):
                 raise util.CommandError(
                     "Can't specify current_rev to context "
                     "when using a database connection")
-            self._version.create(self.connection, checkfirst=True)
+            if 'cqlengine' == self.dialect.name:
+                from cqlengine.exceptions import CQLEngineException
+                # Try to load the data from the DB.
+                # if the CF doesn't exist, create it, if the row doesn't exist
+                # initialize it.
+                try:
+                    xxx = self._version.get(key='alembic').version_num
+                    print '1111111'
+                    print type(xxx)
+                    print xxx
+                    if xxx:
+                        print xxx.startswith("'")
+                    print '1111111'
+                    return self._version.get(key='alembic').version_num
+                except CQLEngineException, e:
+                    from cqlengine import management, models
+                    if 'Keyspace' in e.message and 'does not exist' in e.message:
+                        management.create_keyspace(models.DEFAULT_KEYSPACE)
+                        management.sync_table(self._version)
+                        self._version.create(key='alembic')
+                        return self.get_current_revision()
+                    elif "Bad Request: unconfigured columnfamily alembic_version" in e.message:
+                        management.sync_table(self._version)
+                        self._version.create(key='alembic')
+                        return self.get_current_revision()
+                    elif type(e).__name__ == 'DoesNotExist':
+                        self._version.create(key='alembic')
+                        return self.get_current_revision()
+            else:
+                self._version.create(self.connection, checkfirst=True)
         return self.connection.scalar(self._version.select())
 
     _current_rev = get_current_revision
@@ -162,15 +201,26 @@ class MigrationContext(object):
         if old == new:
             return
         if new is None:
-            self.impl._exec(self._version.delete())
+            if 'cqlengine' == self.dialect.name:
+                from cqlengine import management
+                management.drop_table(self._version)
+            else:
+                self.impl._exec(self._version.delete())
         elif old is None:
-            self.impl._exec(self._version.insert().
-                        values(version_num=literal_column("'%s'" % new))
-                    )
+            if 'cqlengine' == self.dialect.name:
+                self._version.create(key='alembic', version_num=unicode(new))
+            else:
+                self.impl._exec(self._version.insert().
+                            values(version_num=literal_column("'%s'" % new))
+                        )
         else:
-            self.impl._exec(self._version.update().
-                        values(version_num=literal_column("'%s'" % new))
-                    )
+            if 'cqlengine' == self.dialect.name:
+                row = self._version(key='alembic')
+                row.update(version_num=unicode(new))
+            else:
+                self.impl._exec(self._version.update().
+                            values(version_num=literal_column("'%s'" % new))
+                        )
 
     def run_migrations(self, **kw):
         """Run the migration scripts established for this :class:`.MigrationContext`,
@@ -193,11 +243,20 @@ class MigrationContext(object):
          method within revision scripts.
 
         """
+        print '--run_migrations---'
         current_rev = rev = False
         self.impl.start_migrations()
+        print '    after start_migrations'
+        print '    calling {}'.format(self._migrations_fn)
+        print '    xxx{}xxx'.format(self.get_current_revision())
         for change, prev_rev, rev in self._migrations_fn(
                                         self.get_current_revision(),
                                         self):
+            print '_......._'
+            print '...{}...'.format(change)
+            print '...{}...'.format(prev_rev)
+            print '...{}...'.format(rev)
+            print '-iiiiiii-'
             if current_rev is False:
                 current_rev = prev_rev
                 if self.as_sql and not current_rev:
@@ -212,6 +271,7 @@ class MigrationContext(object):
             if not self.impl.transactional_ddl:
                 self._update_current_rev(prev_rev, rev)
             prev_rev = rev
+        print '    after loop'
 
         if rev is not False:
             if self.impl.transactional_ddl:

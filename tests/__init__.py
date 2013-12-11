@@ -1,5 +1,6 @@
 from __future__ import with_statement
 
+import uuid
 from sqlalchemy.engine import url, default
 import shutil
 import os
@@ -271,6 +272,40 @@ datefmt = %%H:%%M:%%S
 
 """ % (dir_, dialect, directives))
 
+def _cqlengine_testing_config():
+    dir_ = os.path.join(staging_directory, 'scripts')
+    return _write_config_file("""
+[alembic]
+script_location = %s
+cqlengine.hosts = localhost:9160
+cqlengine.keyspace = %s
+
+[loggers]
+keys = root
+
+[handlers]
+keys = console
+
+[logger_root]
+level = WARN
+handlers = console
+qualname =
+
+[handler_console]
+class = StreamHandler
+args = (sys.stderr,)
+level = NOTSET
+formatter = generic
+
+[formatters]
+keys = generic
+
+[formatter_generic]
+format = %%(levelname)-5.5s [%%(name)s] %%(message)s
+datefmt = %%H:%%M:%%S
+    """ % (dir_, 'testkeyspace{}'.format(str(uuid.uuid1()).replace('-', ''))))
+
+
 def _write_config_file(text):
     cfg = _testing_config()
     with open(cfg.config_file_name, 'w') as f:
@@ -291,7 +326,7 @@ def staging_env(create=True, template="generic"):
         path = os.path.join(staging_directory, 'scripts')
         if os.path.exists(path):
             shutil.rmtree(path)
-        command.init(cfg, path)
+        command.init(cfg, path, template=template)
     sc = script.ScriptDirectory.from_config(cfg)
     return sc
 
