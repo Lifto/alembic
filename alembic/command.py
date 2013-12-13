@@ -169,10 +169,17 @@ def current(config):
 
     script = ScriptDirectory.from_config(config)
     def display_version(rev, context):
-        print "Current revision for %s: %s" % (
-                            util.obfuscate_url_pw(
-                                context.connection.engine.url),
-                            script.get_revision(rev))
+        try:
+            url = util.obfuscate_url_pw(context.connection.engine.url)
+        except AttributeError:
+            url = None
+        if url:
+            print "Current revision for %s: %s" % (
+                                url,
+                                script.get_revision(rev))
+        else:
+            print "Current revision: %s" % script.get_revision(rev)
+
         return []
 
     with EnvironmentContext(
