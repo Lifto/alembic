@@ -11,7 +11,7 @@ script_location = ${script_location}
 # the 'revision' command, regardless of autogenerate
 # revision_environment = false
 
-cqlengine.url = localhost:9160
+cqlengine.hosts = localhost:9160
 
 
 # Logging configuration
