@@ -83,15 +83,19 @@ class CQLEngineBasicTest(TestCase):
     revision = '%s'
     down_revision = None
 
-    from alembic import op
+    import uuid
+    from cqlengine import columns, management, models
+    class TestTable(models.Model):
+        __table_name__ = 'test_table'
+        partition = columns.Text(primary_key=True)
+        uuid = columns.UUID(primary_key=True, default=uuid.uuid4)
+        title = columns.Text()
 
     def upgrade():
-        pass
-        #op.execute("CREATE TABLE foo(id integer)")
+        management.create_table(TestTable)
 
     def downgrade():
-        pass
-        #op.execute("DROP TABLE foo")
+        management.drop_table(TestTable)
 
     """ % self.a)
 
@@ -100,15 +104,22 @@ class CQLEngineBasicTest(TestCase):
     revision = '%s'
     down_revision = '%s'
 
-    from alembic import op
+    import uuid
+    from alembic.ddl.cqe import add_column
+    from cqlengine import columns, management, models
+    class TestTable(models.Model):
+        __table_name__ = 'test_table'
+        partition = columns.Text(primary_key=True)
+        uuid = columns.UUID(primary_key=True, default=uuid.uuid4)
+        title = columns.Text()
+        new_col = columns.Float()
 
     def upgrade():
-        pass
-        #op.execute("CREATE TABLE bar(id integer)")
+        add_column(TestTable, 'new_col')
 
     def downgrade():
+        # drop column not supported in cassandra 1.2
         pass
-        #op.execute("DROP TABLE bar")
 
     """ % (self.b, self.a))
 
@@ -117,15 +128,21 @@ class CQLEngineBasicTest(TestCase):
     revision = '%s'
     down_revision = '%s'
 
-    from alembic import op
+    import uuid
+    from alembic.ddl.cqe import add_column
+    from cqlengine import columns, management, models
+    class TestTable(models.Model):
+        __table_name__ = 'test_table'
+        partition = columns.Text(primary_key=True)
+        uuid = columns.UUID(primary_key=True, default=uuid.uuid4)
+        new_col2 = columns.Float()
 
     def upgrade():
-        pass
-        #op.execute("CREATE TABLE bat(id integer)")
+        add_column(TestTable, 'new_col2')
 
     def downgrade():
+        # drop column not supported in cassandra 1.2
         pass
-        #op.execute("DROP TABLE bat")
 
     """ % (self.c, self.b))
 
@@ -137,7 +154,7 @@ class CQLEngineBasicTest(TestCase):
         print 'ooo{}ooo'.format(self.b)
         print '--call upgrade-2-'
         command.upgrade(self.cfg, self.b)
-        #command.upgrade(self.cfg, self.c)
+        command.upgrade(self.cfg, self.c)
         #assert "CREATE TYPE pgenum AS ENUM ('one','two','three')" in buf.getvalue()
         #assert "CREATE TABLE sometable (\n    data pgenum\n)" in buf.getvalue()
     #

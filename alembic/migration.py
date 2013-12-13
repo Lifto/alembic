@@ -168,13 +168,6 @@ class MigrationContext(object):
                 # if the CF doesn't exist, create it, if the row doesn't exist
                 # initialize it.
                 try:
-                    xxx = self._version.get(key='alembic').version_num
-                    print '1111111'
-                    print type(xxx)
-                    print xxx
-                    if xxx:
-                        print xxx.startswith("'")
-                    print '1111111'
                     return self._version.get(key='alembic').version_num
                 except CQLEngineException, e:
                     from cqlengine import management, models
@@ -243,20 +236,11 @@ class MigrationContext(object):
          method within revision scripts.
 
         """
-        print '--run_migrations---'
         current_rev = rev = False
         self.impl.start_migrations()
-        print '    after start_migrations'
-        print '    calling {}'.format(self._migrations_fn)
-        print '    xxx{}xxx'.format(self.get_current_revision())
         for change, prev_rev, rev in self._migrations_fn(
                                         self.get_current_revision(),
                                         self):
-            print '_......._'
-            print '...{}...'.format(change)
-            print '...{}...'.format(prev_rev)
-            print '...{}...'.format(rev)
-            print '-iiiiiii-'
             if current_rev is False:
                 current_rev = prev_rev
                 if self.as_sql and not current_rev:
@@ -271,7 +255,6 @@ class MigrationContext(object):
             if not self.impl.transactional_ddl:
                 self._update_current_rev(prev_rev, rev)
             prev_rev = rev
-        print '    after loop'
 
         if rev is not False:
             if self.impl.transactional_ddl:

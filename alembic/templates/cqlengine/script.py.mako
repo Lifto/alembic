@@ -10,8 +10,10 @@ Create Date: ${create_date}
 revision = ${repr(up_revision)}
 down_revision = ${repr(down_revision)}
 
-from alembic import op
-import sqlalchemy as sa
+import uuid
+from alembic.ddl.cqe import add_column
+from cqlengine import columns, management, models
+
 ${imports if imports else ""}
 
 def upgrade():
