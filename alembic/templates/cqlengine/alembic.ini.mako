@@ -12,7 +12,7 @@ script_location = ${script_location}
 # revision_environment = false
 
 cqlengine.hosts = localhost:9160
-
+cqlengine.keyspace = CQLENGINE
 
 # Logging configuration
 [loggers]
