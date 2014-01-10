@@ -1,3 +1,6 @@
+THIS GITHUB VERSION IS OUT OF DATE.
+CURRENT CQLEngine Alembic is at https://bitbucket.org/lifto/alembic
+
 Alembic is a new database migrations tool, written by the author
 of `SQLAlchemy <http://www.sqlalchemy.org>`_.  A migrations tool
 offers the following functionality:
